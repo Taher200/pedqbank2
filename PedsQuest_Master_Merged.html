@@ -94,6 +94,21 @@ select,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:
 .opt.wrong{border-color:var(--bad);background:#fdeaea}
 .opt.wrong .k{border-color:var(--bad);background:var(--bad);color:#fff}
 .opt.dim{opacity:.55}.opt.locked{cursor:default}
+.opt.sel{border-color:var(--accent);background:var(--accent-l)}
+.opt.sel .k{border-color:var(--accent);background:var(--accent);color:#fff}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:7px;margin-top:16px}
+.tgrid button{aspect-ratio:1;border-radius:9px;border:1.5px solid var(--line);background:var(--card);font-weight:600;cursor:pointer;font-size:.85em;color:var(--muted);font-family:inherit}
+.tgrid button.cur{outline:3px solid var(--accent);outline-offset:1px}
+.tgrid button.done{background:var(--accent-l);border-color:var(--accent);color:var(--accent-d)}
+.tgrid button.ok{background:#e7f6ec;border-color:var(--good);color:var(--good)}
+.tgrid button.no{background:#fdeaea;border-color:var(--bad);color:var(--bad)}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.stat{flex:1;min-width:110px;background:var(--accent-l);border-radius:10px;padding:12px;text-align:center}
+.stat .n{font-size:1.35em;font-weight:700}
+.stat .l{font-size:.78em;color:var(--muted)}
+.score-big{font-size:2.5em;font-weight:800;color:var(--accent)}
+.trow{display:flex;justify-content:space-between;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:.9em}
+.trow b{white-space:nowrap}
 
 .explain{margin-top:16px;border-top:1px dashed var(--line);padding-top:14px;display:none}
 .explain.show{display:block}
@@ -514,6 +529,88 @@ function maybeAuto(list){
   }
 }
 
+// ---------------- RANDOM TEST (30 Q across the whole bank) ----------------
+let testList=null, testIdx=0, testAns={}, testDone=false, testReview=false;
+function startTest(n){
+  n=n||30;
+  const all=Q.slice();
+  for(let i=all.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=all[i];all[i]=all[j];all[j]=t}
+  testList=all.slice(0,Math.min(n,all.length));
+  testIdx=0; testAns={}; testDone=false; testReview=false;
+  state.mode='test'; stopSpeak(); stopSlides();
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.remove('on'));
+  if(typeof closeStart==='function')closeStart();
+  render(); window.scrollTo({top:0});
+}
+function sectionOf(t){ for(const s of SECTIONS){ if(s[1].includes(t)) return s[0]; } return 'Other'; }
+function testPick(oi){ if(testDone)return; testAns[testIdx]=oi; if(testIdx<testList.length-1){testIdx++;} render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function testNav(i){ testIdx=i; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function finishTest(){
+  const un=testList.length-Object.keys(testAns).length;
+  if(un>0 && !confirm(un+' question'+(un!==1?'s are':' is')+' unanswered. Finish anyway?')) return;
+  testDone=true; testReview=false; render(); window.scrollTo({top:0});
+}
+function exitTest(){ testList=null; setMode('quiz'); openStart(); }
+function renderTest(head,c){
+  document.getElementById('nowLabel').innerHTML='<b>🎯 Random test</b> · whole bank';
+  if(!testList||!testList.length){ startTest(30); return; }
+  if(testDone){
+    const n=testList.length, right=testList.filter((q,i)=>testAns[i]===q.a).length,
+      wrong=testList.filter((q,i)=>testAns[i]!==undefined&&testAns[i]!==q.a).length, skip=n-right-wrong;
+    head.innerHTML='<div class="crumb">Random knowledge check</div><h2>Test results</h2><p>'+n+' questions sampled across every system</p>';
+    const secs={};
+    testList.forEach((q,i)=>{const s=sectionOf(q.t); secs[s]=secs[s]||[0,0]; secs[s][1]++; if(testAns[i]===q.a)secs[s][0]++;});
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML='<div class="score-big">'+right+'/'+n+' · '+Math.round(100*right/n)+'%</div>'
+      +'<div class="stats"><div class="stat"><div class="n" style="color:var(--good)">'+right+'</div><div class="l">Correct</div></div>'
+      +'<div class="stat"><div class="n" style="color:var(--bad)">'+wrong+'</div><div class="l">Incorrect</div></div>'
+      +'<div class="stat"><div class="n">'+skip+'</div><div class="l">Unanswered</div></div></div>'
+      +'<h3 style="margin:10px 0 4px;font-size:1em">By system</h3>'
+      +Object.keys(secs).sort().map(s=>'<div class="trow"><span>'+esc(s)+'</span><b>'+secs[s][0]+'/'+secs[s][1]+'</b></div>').join('')
+      +'<div class="actions" style="margin-top:18px"><button class="btn solid" onclick="testReview=!testReview;render()">'+(testReview?'Hide review':'📋 Review answers')+'</button>'
+      +'<button class="btn" onclick="startTest(30)">🔀 New test</button>'
+      +'<button class="btn" onclick="exitTest()">← Back to menu</button></div>';
+    c.appendChild(card);
+    if(testReview){
+      testList.forEach((q,i)=>{
+        const el=document.createElement('div'); el.className='card';
+        const my=testAns[i];
+        el.innerHTML='<div class="qmeta"><span class="pill">Q'+(i+1)+'</span><span class="pill sub">'+esc(topicName(q.t))+' › '+esc(q.s)+'</span>'
+          +(my===q.a?'<span class="pill" style="color:var(--good);border-color:var(--good)">✓ correct</span>':(my===undefined?'<span class="pill">— skipped</span>':'<span class="pill" style="color:var(--bad);border-color:var(--bad)">✗ wrong</span>'))
+          +'</div><div class="stem">'+esc(q.q)+'</div>'
+          +'<ul class="opts">'+q.o.map((o,oi)=>'<li class="opt locked '+(oi===q.a?'correct':(my===oi?'wrong':'dim'))+'"><span class="k">'+KEYS[oi]+'</span><span class="txt">'+esc(o)+'</span></li>').join('')+'</ul>'
+          +'<div class="explain show"><p>'+esc(q.e||'')+'</p>'+(q.r?'<div class="ref">▸ '+esc(q.r)+'</div>':'')+'</div>';
+        c.appendChild(el);
+      });
+    }
+    return;
+  }
+  const q=testList[testIdx], my=testAns[testIdx], done=Object.keys(testAns).length;
+  head.innerHTML='<div class="crumb">Random knowledge check · no feedback until you finish</div><h2>Question '+(testIdx+1)+' of '+testList.length+'</h2><p>'+done+' answered · sampled across every system</p>';
+  const p=document.getElementById('prog'); p.style.display='flex';
+  document.getElementById('progTxt').textContent='Q '+(testIdx+1)+'/'+testList.length+' · '+done+' answered';
+  document.getElementById('progBar').style.width=(100*done/testList.length)+'%';
+  const el=document.createElement('div'); el.className='card';
+  el.innerHTML='<div class="qmeta"><span class="pill sub">'+esc(topicName(q.t))+' › '+esc(q.s)+'</span>'+(q.y?'<span class="pill yr">'+q.y+'</span>':'')+'<span class="pill">Q'+(testIdx+1)+'</span></div>'
+    +'<div class="stem">'+esc(q.q)+'</div>';
+  const ul=document.createElement('ul'); ul.className='opts';
+  q.o.forEach((o,oi)=>{const li=document.createElement('li'); li.className='opt'+(my===oi?' sel':'');
+    li.innerHTML='<span class="k">'+KEYS[oi]+'</span><span class="txt">'+esc(o)+'</span>';
+    li.onclick=()=>testPick(oi); ul.appendChild(li);});
+  el.appendChild(ul);
+  const act=document.createElement('div'); act.className='actions';
+  act.innerHTML='<button class="btn" onclick="testNav('+Math.max(0,testIdx-1)+')" '+(testIdx===0?'disabled':'')+'>← Prev</button>'
+    +'<button class="btn" onclick="testNav('+Math.min(testList.length-1,testIdx+1)+')" '+(testIdx===testList.length-1?'disabled':'')+'>Next →</button>'
+    +'<span style="flex:1"></span>'
+    +'<button class="btn solid" onclick="finishTest()">🏁 Finish test</button>'
+    +'<button class="btn" onclick="exitTest()" title="Abandon this test">✕ Exit</button>';
+  el.appendChild(act);
+  const grid=document.createElement('div'); grid.className='tgrid';
+  grid.innerHTML=testList.map((_,i)=>'<button class="'+(i===testIdx?'cur ':'')+(testAns[i]!==undefined?'done':'')+'" onclick="testNav('+i+')">'+(i+1)+'</button>').join('');
+  el.appendChild(grid);
+  c.appendChild(el);
+}
+
 // ---------------- render ----------------
 function render(){
   clearAuto();
@@ -525,6 +622,7 @@ function render(){
   if(state.mode==='tables'){ return renderTables(head,c); }
   if(state.mode==='cards'){ return renderCards(head,c); }
   if(state.mode==='slides'){ return renderSlides(head,c); }
+  if(state.mode==='test'){ return renderTest(head,c); }
 
   const list=pool();
   head.innerHTML=`<div class="crumb">${esc(topicName(state.topic))}</div><h2>${esc(state.sub||'All subtopics')}</h2><p>${list.length} question${list.length!==1?'s':''} ${state.year!=='all'?'· '+state.year+' recalls':''}</p>`;
@@ -850,6 +948,12 @@ document.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
   if(state.mode==='slides'){ if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();slideNext()} else if(e.key==='ArrowLeft'){slidePrev()} else if(e.key.toLowerCase()==='p'){togglePlay()} return; }
   if(state.mode==='cards'){ if(e.key===' '||e.key==='Enter'){e.preventDefault();flipCard()} else if(e.key==='ArrowRight'){fcGot()} else if(e.key==='ArrowLeft'){fcAgain()} return; }
+  if(state.mode==='test'){ if(testDone)return;
+    const tq=testList&&testList[testIdx]; if(!tq)return;
+    if(e.key>='1'&&e.key<=String(tq.o.length)){testPick(+e.key-1)}
+    else if(e.key==='ArrowRight'){testNav(Math.min(testList.length-1,testIdx+1))}
+    else if(e.key==='ArrowLeft'){testNav(Math.max(0,testIdx-1))}
+    return; }
   if(state.mode!=='quiz')return;
   const l=pool(),q=l[state.idx];if(!q)return;
   if(e.key>='1'&&e.key<=String(q.o.length)){if(state.answered[qid(q)]===undefined){chooseAnswer(q,+e.key-1)}}
@@ -909,7 +1013,7 @@ function openStart(){document.getElementById('startOv').classList.add('show')}
 function closeStart(){document.getElementById('startOv').classList.remove('show')}
 (function buildStart(){
   const modes=[['quiz','📝 Quiz'],['learn','📖 Learn'],['cards','🃏 Flashcards'],['tables','📊 Tables'],['slides','🎞 Slides']];
-  document.getElementById('startModes').innerHTML=modes.map(m=>`<button onclick="setMode('${m[0]}');closeStart()">${m[1]}</button>`).join('');
+  document.getElementById('startModes').innerHTML='<button class="tstbtn" onclick="startTest(30)" style="background:var(--accent);color:#fff;border-color:var(--accent)">🎯 Do my test · 30 random Qs</button>'+modes.map(m=>`<button onclick="setMode('${m[0]}');closeStart()">${m[1]}</button>`).join('');
   let hh='';
   SECTIONS.forEach(([label,ids])=>{
     const chips=ids.map(id=>{const n=countTopic(id); if(!n)return ''; return `<button class="chip" onclick="pickTopic('${id}');closeStart()">${esc(topicName(id))}<span class="n">${n}</span></button>`}).join('');
