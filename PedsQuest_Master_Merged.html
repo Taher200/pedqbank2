@@ -142,6 +142,21 @@ select,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:
 .matrow img{max-width:120px;border-radius:6px}
 .matrow button{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 9px;cursor:pointer}
 .mbtn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer;margin-top:6px}
+.dashgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;margin-top:14px}
+.dcard{margin:0}
+.dhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-size:1.02em}
+.dchip{font-size:11px;font-family:ui-monospace,monospace;border-radius:30px;padding:3px 10px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.dchip.ok{background:#e7f6ec;border-color:var(--good);color:var(--good)}
+.dchip.mid{background:#fef3e2;border-color:var(--amber);color:var(--amber)}
+.dchip.bad{background:#fdeaea;border-color:var(--bad);color:var(--bad)}
+.drow{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted);margin:6px 0 4px}
+.drow b{color:var(--ink)}
+.dbar{height:7px;background:#e2e7f2;border-radius:99px;overflow:hidden}
+.dbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);border-radius:99px}
+.dweak{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.9}
+.dweak button{font:inherit;font-size:11.5px;border:1px solid #f0c9c6;background:#fdeaea;color:var(--bad);border-radius:30px;padding:3px 10px;cursor:pointer;margin:2px 3px 0 0}
+#startCard .chip.sec{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+#startCard .chip.sec:hover{background:var(--accent-d)}
 .kw{background:linear-gradient(transparent 60%,#ffe39a 60%);border-radius:2px}
 
 /* ---- relevant note attached to a question ---- */
@@ -438,20 +453,33 @@ const TABLES = [{"t": "congenital", "title": "Congenital infections — how to t
 const SECTIONS = [["Neonatology & perinatal", ["nndeliveryroomre", "nnrespiratory", "nncardiology", "nnneurology", "nnhematology", "nninfectiousdise", "nnmetabolicendoc", "nngastroenterolo", "nngeneticsdysmor", "nnscreeningdisch", "nnsubstanceexpos", "nnmiscellaneousa", "neorecall"]], ["Cardiovascular", ["chd", "rhythm", "acqcard", "cardexam", "cardrecall"]], ["Respirology & acute care", ["rsrespiratorysig", "rsstridor", "rscroup", "rsforeignbodyupp", "rscongenitalstru", "rsupperairwayall", "rsasthma", "rsbronchiolitis", "rspneumonia", "rspertussis", "rstuberculosis", "rscfbronchiectas", "rschroniccough", "rsosasleep", "rsneonatallungdi", "rsrespiratoryfai", "rsacutechestemer", "rsenvironmentalp", "respacute", "resprecall"]], ["Emergency, environmental & toxicology", ["envinj", "emergtox"]], ["Infectious disease & immunization", ["congenital", "neonatesepsis", "cns", "resp", "ssti", "lymph", "gi", "gu", "tb", "hiv", "viral", "vaccines", "exposures", "travel", "host", "idrecall"]], ["Gastroenterology, hepatology & nutrition", ["gxgerddysphagia", "gxpepticdiseaseh", "gxgiinfections", "gxdiarrhea", "gxmalabsorption", "gxceliacdisease", "gxcowsmilkprotei", "gxibd", "gxconstipation", "gxdgbifunctional", "gxabdominalpain", "gxintestinalblee", "gxjaundice", "gxhepatology", "gxpancreatitis", "gxnutrition", "gxmiscellaneous", "girecall"]], ["Pediatric surgery", ["sgacuteabdomenap", "sgintussusceptio", "sgmeckelsdiverti", "sginguinalhernia", "sgacutescrotumcr", "sghypertrophicpy", "sgmalrotationmid", "sgneonatalintest", "sgcongenitaldiap", "sgesophagealatre", "sgabdominalwalld", "sgforeignbodiesi", "sgperianalmiscel", "sgperioperativec"]], ["Nephrology & urology", ["nephro", "urimaging", "urenuresis", "urincontinence", "urpharmacology", "urphysicalexam", "uro"]], ["Endocrinology & growth", ["endsdambiguousge", "encahadrenalcris", "enpituitarywater", "engrowthshortsta", "enpuberty", "enthyroid", "encalciumbone", "enhypoglycemia", "endiabetes", "enobesitydyslipi", "endorecall"]], ["Neurology & development", ["nxseizuresepilep", "nxfebrileseizure", "nxneuroinvestiga", "nxheadache", "nxneuromuscular", "nxmovementataxia", "nxhypotonia", "nxcerebralpalsym", "nxdevelopmentreg", "nxneurocutaneous", "nxneurometabolic", "nxstrokevascular", "nxcnsinfectionin", "nxconcussionhead", "nxheadsizehydroc", "neurorecall", "devel"]], ["Genetics, dysmorphology & metabolic", ["gfound", "gdysm", "gtest", "gchrom", "ggene", "genext", "iem", "genrecall"]], ["Hematology & oncology", ["hemat", "oncol", "hemrecall"]], ["Allergy & immunology", ["alanaphylaxiseme", "alurticariaangio", "alfoodallergyint", "alallergytesting", "alallergicrhinit", "aldrugvaccineall", "alimmunodeficien", "alimmunodefici2", "alimmunodefici3", "alimmunodefici4", "alphagocytecompl", "alautoinflammato", "allrecall"]], ["Rheumatology & musculoskeletal", ["omsepticarthriti", "ombonejointinfec", "omhipdisorders", "ombonetumours", "omtraumanonaccid", "omoverusekneepai", "omspinescoliosis", "omkawasakimisc", "omjiarelatedarth", "omsleconnectivet", "omacuterheumatic", "omhspvasculitis", "ommetabolicskele", "omchronicpainsyn", "omfootgaitvarian", "rheumrecall"]], ["Dermatology", ["dmatopiceczemato", "dminfectionsinfe", "dmhairdisorders", "dmacne", "dmvascularlesion", "dmpigmentedlesio", "dmpigmentarydiso", "dmneurocutaneo2", "dmneonatalerupti", "dmdrugreactiveer", "dmcutaneoussigns", "dmneonatalnutrit", "dmpapularinfiltr", "dmpapulosquamous", "dmurticariaaller", "dmbacterialinfec", "dmburnsphysical", "dmviralinfection", "dermrecall"]], ["Ophthalmology & ENT", ["ophtho", "ent"]], ["Adolescent, psychiatry & social", ["adol", "gyn", "psych", "abuse"]], ["General pediatrics, ethics & prevention", ["genped", "nutr", "ethics", "prevent"]]];
 
 
+// section map & whole-section quiz
+const SECMAP={}; SECTIONS.forEach(s=>{SECMAP[s[0]]=new Set(s[1])});
+function pickSection(label){
+  state.sec=label; const ids=SECMAP[label];
+  if(ids&&ids.size)state.topic=[...ids][0];
+  state.sub=null; state.idx=0; state.secDone=false; state.reviewIds=null;
+  stopSpeak(); stopSlides(); buildTOC(); setMode('quiz'); toggleMenu(false);
+  if(typeof closeStart==='function')closeStart(); window.scrollTo({top:0});
+}
+function pickSectionI(i){pickSection(SECTIONS[i][0]);}
+
 // merge CPS algorithms + practice points into TEACH cards
 (function mergeAddon(){ if(typeof ADDON==='undefined')return;
   const m={}; ADDON.forEach(a=>m[a.name]=a);
   TEACH.forEach(t=>{ if(m[t.name]){ t.algo=m[t.name].algo; t.pp=m[t.name].pp; } });
 })();
 
-let state={mode:'quiz',topic:TOPICS[0][0],sub:null,year:'all',search:'',sbq:'',answered:{},idx:0};
+let state={mode:'quiz',topic:TOPICS[0][0],sub:null,sec:null,year:'all',search:'',sbq:'',answered:{},idx:0};
+try{const _pa=JSON.parse(localStorage.getItem('pq_answers_v1')||'null'); if(_pa&&typeof _pa==='object')state.answered=_pa;}catch(e){}
+function saveAnswers(){try{localStorage.setItem('pq_answers_v1',JSON.stringify(state.answered))}catch(e){}}
 const years=[...new Set(Q.map(q=>q.y).filter(Boolean))].sort((a,b)=>b-a);
 const KEYS=['A','B','C','D','E'];
 const STOP=new Set(['and','the','of','in','to','a','with','for','amp','other','by','on','its']);
 
 function topicName(id){return (TOPICS.find(t=>t[0]===id)||[,''])[1]}
 function subList(id){return (TOPICS.find(t=>t[0]===id)||[,,[]])[2]}
-function pool(){return Q.filter(q=>q.t===state.topic&&(!state.sub||q.s===state.sub)&&(state.year==='all'||String(q.y)===state.year)&&(!state.search||(q.q+' '+q.s).toLowerCase().includes(state.search))&&(!state.reviewIds||state.reviewIds.has(qid(q))))}
+function pool(){return Q.filter(q=>(state.sec?SECMAP[state.sec].has(q.t):q.t===state.topic)&&(!state.sub||q.s===state.sub)&&(state.year==='all'||String(q.y)===state.year)&&(!state.search||(q.q+' '+q.s).toLowerCase().includes(state.search))&&(!state.reviewIds||state.reviewIds.has(qid(q))))}
 function teachFor(id){return TEACH.filter(x=>x.t===id)}
 function countTopic(id){return Q.filter(q=>q.t===id).length}
 function countSub(id,s){return Q.filter(q=>q.t===id&&q.s===s).length}
@@ -509,9 +537,9 @@ function buildTOC(){
   document.getElementById('ovrTxt').innerHTML=`<span>Answered <b>${ans}</b>/${tot}</span><span><b>${TEACH.length}</b> notes</span>`;
   document.getElementById('ovrBar').style.width=(tot?100*ans/tot:0)+'%';
 }
-function pickTopic(id){state.topic=id;state.sub=null;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
-function pickSub(id,s){state.topic=id;state.sub=s;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
-function resetProgress(){if(confirm('Clear all answered/score progress?')){state.answered={};buildTOC();render()}}
+function pickTopic(id){state.sec=null;state.topic=id;state.sub=null;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
+function pickSub(id,s){state.sec=null;state.topic=id;state.sub=s;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
+function resetProgress(){if(confirm('Clear all answered/score progress?')){state.answered={};try{localStorage.removeItem('pq_answers_v1')}catch(e){};buildTOC();render()}}
 
 // ---------------- top bar ----------------
 function buildBar(){
@@ -553,7 +581,7 @@ function runBar(secs,label,color,onDone){
 }
 function autoReveal(){
   const l=pool(),q=l[state.idx]; if(!q)return;
-  if(state.answered[qid(q)]===undefined){state.answered[qid(q)]=-1; buildTOC(); render();}
+  if(state.answered[qid(q)]===undefined){state.answered[qid(q)]=-1; saveAnswers(); buildTOC(); render();}
 }
 function maybeAuto(list){
   if(!autoMode||state.mode!=='quiz')return;
@@ -566,6 +594,45 @@ function maybeAuto(list){
     speak('Answer '+KEYS[q.a]+'. '+q.o[q.a]+'. '+(q.e||''),
       ()=>{ if(autoMode&&state.mode==='quiz') runBar(autoDelay,'Next question in','#15803d',()=>nextQ()); });
   }
+}
+
+// ---------------- PROGRESS DASHBOARD ----------------
+function renderDash(head,c){
+  document.getElementById('nowLabel').innerHTML='<b>📈 Progress dashboard</b>';
+  const tot=Q.length, ansAll=Q.filter(q=>state.answered[qid(q)]!==undefined),
+    rightAll=Q.filter(q=>state.answered[qid(q)]===q.a);
+  head.innerHTML=`<div class="crumb">Progress dashboard</div><h2>All sections</h2><p>${ansAll.length}/${tot} answered · ${ansAll.length?Math.round(100*rightAll.length/ansAll.length):0}% correct overall · accuracy counts answered questions only · 💪 ≥80% · 🟡 60–79% · ⚠ &lt;60%</p>`;
+  const ov=document.createElement('div'); ov.className='card';
+  ov.innerHTML='<div class="drow"><span>Overall coverage</span><b>'+ansAll.length+'/'+tot+' ('+Math.round(100*ansAll.length/tot)+'%)</b></div>'
+    +'<div class="dbar"><i style="width:'+(100*ansAll.length/tot)+'%"></i></div>'
+    +'<div class="drow"><span>Overall accuracy</span><b>'+(ansAll.length?Math.round(100*rightAll.length/ansAll.length)+'%':'—')+'</b></div>'
+    +'<div class="dbar"><i style="width:'+(ansAll.length?100*rightAll.length/ansAll.length:0)+'%;background:var(--good)"></i></div>';
+  c.appendChild(ov);
+  const wrap=document.createElement('div'); wrap.className='dashgrid';
+  SECTIONS.forEach((s,si)=>{
+    const label=s[0], ids=s[1];
+    const sqs=Q.filter(q=>SECMAP[label].has(q.t)); if(!sqs.length)return;
+    const ans=sqs.filter(q=>state.answered[qid(q)]!==undefined);
+    const right=sqs.filter(q=>state.answered[qid(q)]===q.a);
+    const cov=Math.round(100*ans.length/sqs.length);
+    const acc=ans.length?Math.round(100*right.length/ans.length):null;
+    let chip='not started', cls='';
+    if(ans.length>=5){ if(acc>=80){chip='💪 Strong';cls='ok'} else if(acc>=60){chip='🟡 Moderate';cls='mid'} else {chip='⚠ Weak';cls='bad'} }
+    else if(ans.length){chip=ans.length+' answered';}
+    const weak=[]; ids.forEach(t=>{const tq=Q.filter(q=>q.t===t); const ta=tq.filter(q=>state.answered[qid(q)]!==undefined);
+      if(ta.length>=3){const tr=tq.filter(q=>state.answered[qid(q)]===q.a); const p=Math.round(100*tr.length/ta.length); if(p<70)weak.push([t,p]);}});
+    weak.sort((a,b)=>a[1]-b[1]);
+    const el=document.createElement('div'); el.className='card dcard';
+    el.innerHTML='<div class="dhead"><b>'+esc(label)+'</b><span class="dchip '+cls+'">'+chip+'</span></div>'
+      +'<div class="drow"><span>Answered</span><b>'+ans.length+'/'+sqs.length+'</b></div>'
+      +'<div class="dbar"><i style="width:'+cov+'%"></i></div>'
+      +'<div class="drow"><span>Accuracy</span><b>'+(acc===null?'—':acc+'%')+'</b></div>'
+      +'<div class="dbar"><i style="width:'+(acc||0)+'%;background:'+(acc===null?'#ccd5e8':acc>=80?'var(--good)':acc>=60?'var(--amber)':'var(--bad)')+'"></i></div>'
+      +(weak.length?'<div class="dweak">⚠ Weakest topics: '+weak.slice(0,3).map(w=>'<button onclick="pickTopic(\''+w[0]+'\')">'+esc(topicName(w[0]))+' · '+w[1]+'%</button>').join('')+'</div>':'')
+      +'<div class="actions" style="margin-top:10px"><button class="btn solid" onclick="pickSectionI('+si+')">▶ Test whole section</button></div>';
+    wrap.appendChild(el);
+  });
+  c.appendChild(wrap);
 }
 
 // ---------------- flags & learning materials ----------------
@@ -631,15 +698,29 @@ function sectionSummary(head,c,list){
   const wrong=list.filter(q=>{const a=state.answered[qid(q)];return a!==undefined&&a!==q.a});
   const right=list.filter(q=>state.answered[qid(q)]===q.a);
   const flg=list.filter(isFlagged);
-  head.innerHTML=`<div class="crumb">${esc(topicName(state.topic))}</div><h2>Section complete ✔</h2><p>${esc(state.sub||'All subtopics')} · ${right.length}/${list.length} correct${flg.length?' · ⚑ '+flg.length+' flagged':''}</p>`;
+  head.innerHTML=`<div class="crumb">${esc(state.sec||topicName(state.topic))}</div><h2>Section complete ✔</h2><p>${esc(state.sec?'Whole section':(state.sub||'All subtopics'))} · ${right.length}/${list.length} correct${flg.length?' · ⚑ '+flg.length+' flagged':''}</p>`;
   const sc=document.createElement('div'); sc.className='card';
   sc.innerHTML='<div class="score-big">'+right.length+'/'+list.length+' · '+Math.round(100*right.length/Math.max(1,list.length))+'%</div>'
     +'<div class="actions" style="margin-top:12px">'
     +(wrong.length?'<button class="btn solid" onclick="retryWrong()">↺ Retry the '+wrong.length+' wrong</button>':'')
     +(flg.length?'<button class="btn flg on" onclick="reviewFlagged()">⚑ Redo '+flg.length+' flagged</button>':'')
     +'<button class="btn" onclick="restartSection()">Restart section</button>'
+    +'<button class="btn" onclick="setMode(\'dash\')">📈 Dashboard</button>'
     +'<button class="btn" onclick="state.secDone=false;state.reviewIds=null;openStart()">Pick another topic</button></div>';
   c.appendChild(sc);
+  // strengths & weaknesses for this run
+  const groups={};
+  list.forEach(q=>{const g=state.sec?topicName(q.t):q.s; groups[g]=groups[g]||[0,0];
+    const a=state.answered[qid(q)]; if(a!==undefined){groups[g][1]++; if(a===q.a)groups[g][0]++;}});
+  const rows=Object.keys(groups).filter(g=>groups[g][1]>0).map(g=>[g,Math.round(100*groups[g][0]/groups[g][1]),groups[g][1]]).sort((a,b)=>a[1]-b[1]);
+  if(rows.length>1){
+    const sw=document.createElement('div'); sw.className='card';
+    sw.innerHTML='<h3 style="margin:0 0 4px;font-size:1.05em">Strengths &amp; weaknesses</h3><p style="margin:0 0 8px;font-size:12.5px;color:var(--muted)">💪 ≥80% · 🟡 60–79% · ⚠ &lt;60% — weakest first</p>'
+      +rows.map(r=>{const col=r[1]>=80?'var(--good)':r[1]>=60?'var(--amber)':'var(--bad)';
+        return '<div class="drow"><span>'+esc(r[0])+' <span style="opacity:.6">('+r[2]+' q)</span></span><b style="color:'+col+'">'+(r[1]>=80?'💪 ':r[1]<60?'⚠ ':'🟡 ')+r[1]+'%</b></div>'
+        +'<div class="dbar"><i style="width:'+r[1]+'%;background:'+col+'"></i></div>';}).join('');
+    c.appendChild(sw);
+  }
   if(wrong.length){
     const hd=document.createElement('div'); hd.className='tblhdr'; hd.textContent='Questions you got wrong — review'; c.appendChild(hd);
     wrong.forEach((q,i)=>c.appendChild(card(q,i,true)));
@@ -650,16 +731,16 @@ function sectionSummary(head,c,list){
 function retryWrong(){
   const l=pool(); const wrong=l.filter(q=>{const a=state.answered[qid(q)];return a!==undefined&&a!==q.a});
   if(!wrong.length)return;
-  const ids=new Set(wrong.map(qid)); wrong.forEach(q=>{delete state.answered[qid(q)]});
+  const ids=new Set(wrong.map(qid)); wrong.forEach(q=>{delete state.answered[qid(q)]}); saveAnswers();
   state.reviewIds=ids; state.idx=0; state.secDone=false; buildTOC(); render(); window.scrollTo({top:0});
 }
 function reviewFlagged(){
   const l=pool().filter(isFlagged); if(!l.length)return;
-  l.forEach(q=>{delete state.answered[qid(q)]});
+  l.forEach(q=>{delete state.answered[qid(q)]}); saveAnswers();
   state.reviewIds=new Set(l.map(qid)); state.idx=0; state.secDone=false; buildTOC(); render(); window.scrollTo({top:0});
 }
 function restartSection(){
-  state.reviewIds=null; const l=pool(); l.forEach(q=>{delete state.answered[qid(q)]});
+  state.reviewIds=null; const l=pool(); l.forEach(q=>{delete state.answered[qid(q)]}); saveAnswers();
   state.idx=0; state.secDone=false; buildTOC(); render(); window.scrollTo({top:0});
 }
 
@@ -749,7 +830,7 @@ function renderTest(head,c){
 function render(){
   clearAuto();
   const head=document.getElementById('head'), c=document.getElementById('content'); c.innerHTML='';
-  document.getElementById('nowLabel').innerHTML=`<b>${esc(topicName(state.topic))}</b>${state.sub?' › '+esc(state.sub):''}`;
+  document.getElementById('nowLabel').innerHTML=state.sec?`<b>${esc(state.sec)}</b> · whole section`:`<b>${esc(topicName(state.topic))}</b>${state.sub?' › '+esc(state.sub):''}`;
   document.getElementById('prog').style.display='none';
 
   if(state.mode==='learn'){ return renderLearn(head,c); }
@@ -757,9 +838,10 @@ function render(){
   if(state.mode==='cards'){ return renderCards(head,c); }
   if(state.mode==='slides'){ return renderSlides(head,c); }
   if(state.mode==='test'){ return renderTest(head,c); }
+  if(state.mode==='dash'){ return renderDash(head,c); }
 
   const list=pool();
-  head.innerHTML=`<div class="crumb">${esc(topicName(state.topic))}</div><h2>${esc(state.sub||'All subtopics')}</h2><p>${list.length} question${list.length!==1?'s':''} ${state.year!=='all'?'· '+state.year+' recalls':''}</p>`;
+  head.innerHTML=`<div class="crumb">${esc(state.sec||topicName(state.topic))}</div><h2>${esc(state.sec?'Whole section':(state.sub||'All subtopics'))}</h2><p>${list.length} question${list.length!==1?'s':''} ${state.year!=='all'?'· '+state.year+' recalls':''}</p>`;
   if(!list.length){c.innerHTML='<div class="empty">No questions match. Clear the search or year filter.</div>';return}
   if(state.mode==='preview'){ list.forEach((q,i)=>c.appendChild(card(q,i,true))); }
   else if(state.secDone){ sectionSummary(head,c,list); }
@@ -996,7 +1078,7 @@ function card(q,i,preview){
   }
   return el;
 }
-function peek(btn){const q=btn.closest('.card')._q; if(state.answered[qid(q)]===undefined){state.answered[qid(q)]=-1;render()}}
+function peek(btn){const q=btn.closest('.card')._q; if(state.answered[qid(q)]===undefined){state.answered[qid(q)]=-1;saveAnswers();render()}}
 function prevQ(){if(state.idx>0){state.idx--;stopSpeak();render();window.scrollTo({top:0,behavior:'smooth'})}}
 function nextQ(){const l=pool();
   if(state.idx>=l.length-1){state.secDone=true;stopSpeak();render();window.scrollTo({top:0,behavior:'smooth'});return}
@@ -1091,7 +1173,7 @@ function speakCard(btn){const card=btn.closest('.card');const q=card._q;if(!q)re
 function toggleMenu(open){document.getElementById('aside').classList.toggle('open',open);document.getElementById('scrim').classList.toggle('show',open)}
 function toggleTray(){var t=document.getElementById('tray');if(t)t.classList.toggle('open')}
 function autohideSidebar(){ if(window.innerWidth<=860){toggleMenu(false)} }
-function chooseAnswer(q,oi){ state.answered[qid(q)]=oi; stopSpeak(); autohideSidebar(); buildTOC(); render(); }
+function chooseAnswer(q,oi){ state.answered[qid(q)]=oi; saveAnswers(); stopSpeak(); autohideSidebar(); buildTOC(); render(); }
 document.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
   if(state.mode==='slides'){ if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();slideNext()} else if(e.key==='ArrowLeft'){slidePrev()} else if(e.key.toLowerCase()==='p'){togglePlay()} return; }
@@ -1161,11 +1243,12 @@ function openStart(){document.getElementById('startOv').classList.add('show')}
 function closeStart(){document.getElementById('startOv').classList.remove('show')}
 (function buildStart(){
   const modes=[['quiz','📝 Quiz'],['learn','📖 Learn'],['cards','🃏 Flashcards'],['tables','📊 Tables'],['slides','🎞 Slides']];
-  document.getElementById('startModes').innerHTML='<button class="tstbtn" onclick="startTest(30)" style="background:var(--accent);color:#fff;border-color:var(--accent)">🎯 Do my test · 30 random Qs</button>'+modes.map(m=>`<button onclick="setMode('${m[0]}');closeStart()">${m[1]}</button>`).join('');
+  document.getElementById('startModes').innerHTML='<button class="tstbtn" onclick="startTest(30)" style="background:var(--accent);color:#fff;border-color:var(--accent)">🎯 Do my test · 30 random Qs</button>'+'<button onclick="setMode(&quot;dash&quot;);closeStart()">📈 Dashboard</button>'+modes.map(m=>`<button onclick="setMode('${m[0]}');closeStart()">${m[1]}</button>`).join('');
   let hh='';
-  SECTIONS.forEach(([label,ids])=>{
+  SECTIONS.forEach(([label,ids],si)=>{
+    const secN=ids.reduce((s,id)=>s+countTopic(id),0);
     const chips=ids.map(id=>{const n=countTopic(id); if(!n)return ''; return `<button class="chip" onclick="pickTopic('${id}');closeStart()">${esc(topicName(id))}<span class="n">${n}</span></button>`}).join('');
-    if(chips) hh+=`<div class="grp">${esc(label)}</div><div class="chips">${chips}</div>`;
+    if(chips) hh+=`<div class="grp">${esc(label)}</div><div class="chips"><button class="chip sec" onclick="pickSectionI(${si});closeStart()">▶ Whole section · ${secN} Q</button>${chips}</div>`;
   });
   document.getElementById('startSecs').innerHTML=hh;
   openStart();
