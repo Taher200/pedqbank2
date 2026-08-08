@@ -117,6 +117,10 @@ select,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:
 .explain p{margin:0 0 10px;font-size:.9em;line-height:1.6}
 .ref{font-size:.78em;color:var(--accent-d);background:var(--accent-l);border-left:3px solid var(--accent);padding:7px 11px;border-radius:0 7px 7px 0;font-family:ui-monospace,monospace}
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.autobar{margin-top:14px;background:var(--accent-l);border:1px solid #c5d8fb;border-radius:10px;padding:10px 14px}
+.autobar .abtxt{font-size:12.5px;font-weight:600;color:var(--accent-d);margin-bottom:7px;font-family:ui-monospace,monospace}
+.autobar .abtrack{height:8px;background:#fff;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.autobar .abtrack i{display:block;height:100%;width:100%;border-radius:99px;background:var(--accent);transition:width 1s linear}
 .kw{background:linear-gradient(transparent 60%,#ffe39a 60%);border-radius:2px}
 
 /* ---- relevant note attached to a question ---- */
@@ -505,27 +509,41 @@ function onSearch(){state.search=document.getElementById('search').value.trim().
 function onSbSearch(){state.sbq=document.getElementById('sbSearch').value.trim().toLowerCase();buildTOC()}
 
 // ---------------- quiz auto-read & auto-advance ----------------
-let autoMode=false, autoDelay=30, autoTimer=null, autoTick=null, autoLeft=0;
-try{autoMode=localStorage.getItem('pq_auto')==='1'; const _d=+localStorage.getItem('pq_autoDelay'); if([30,40,60].includes(_d)) autoDelay=_d;}catch(e){}
-function saveAuto(){try{localStorage.setItem('pq_auto',autoMode?'1':'0');localStorage.setItem('pq_autoDelay',autoDelay)}catch(e){}}
+let autoMode=false, autoDelay=30, thinkDelay=30, autoTimer=null, autoTick=null, autoLeft=0;
+try{autoMode=localStorage.getItem('pq_auto')==='1';
+  const _d=+localStorage.getItem('pq_autoDelay'); if([30,40,60].includes(_d)) autoDelay=_d;
+  const _t=+localStorage.getItem('pq_thinkDelay'); if([30,60].includes(_t)) thinkDelay=_t;}catch(e){}
+function saveAuto(){try{localStorage.setItem('pq_auto',autoMode?'1':'0');localStorage.setItem('pq_autoDelay',autoDelay);localStorage.setItem('pq_thinkDelay',thinkDelay)}catch(e){}}
 function clearAuto(){if(autoTimer){clearTimeout(autoTimer);autoTimer=null}if(autoTick){clearInterval(autoTick);autoTick=null}autoLeft=0;
-  const b=document.getElementById('nextBtn'); if(b)b.innerHTML='Next →';}
+  const b=document.getElementById('nextBtn'); if(b)b.innerHTML='Next →';
+  const bar=document.getElementById('autoBar'); if(bar)bar.style.display='none';}
 function toggleAuto(){autoMode=!autoMode;saveAuto();clearAuto();stopSpeak();render()}
-function startCountdown(){
-  clearAuto(); autoLeft=autoDelay;
-  const b=document.getElementById('nextBtn'); if(b)b.innerHTML='Next → '+autoLeft+'s';
+function runBar(secs,label,color,onDone){
+  clearAuto(); autoLeft=secs;
+  const bar=document.getElementById('autoBar'),txt=document.getElementById('abTxt'),fill=document.getElementById('abFill');
+  if(bar){bar.style.display='block'; fill.style.background=color; fill.style.transition='none'; fill.style.width='100%';
+    void fill.offsetWidth; fill.style.transition='width 1s linear'; txt.textContent=label+' '+autoLeft+' s';}
   autoTick=setInterval(()=>{autoLeft--;
-    if(autoLeft<=0){clearAuto();nextQ();return}
-    const b2=document.getElementById('nextBtn'); if(b2)b2.innerHTML='Next → '+autoLeft+'s';},1000);
+    if(autoLeft<=0){clearAuto();onDone();return}
+    const t2=document.getElementById('abTxt'),f2=document.getElementById('abFill');
+    if(t2)t2.textContent=label+' '+autoLeft+' s';
+    if(f2)f2.style.width=(100*autoLeft/secs)+'%';
+  },1000);
+}
+function autoReveal(){
+  const l=pool(),q=l[state.idx]; if(!q)return;
+  if(state.answered[qid(q)]===undefined){state.answered[qid(q)]=-1; buildTOC(); render();}
 }
 function maybeAuto(list){
   if(!autoMode||state.mode!=='quiz')return;
   const q=list[state.idx]; if(!q)return; const ans=state.answered[qid(q)];
   if(ans===undefined){
     const cardEl=document.querySelector('#content .card'); const stem=cardEl?cardEl.querySelector('.stem'):null;
-    speak(q.q+'. '+q.o.map((o,i)=>KEYS[i]+'. '+o).join('. '),null,stem);
+    speak(q.q+'. '+q.o.map((o,i)=>KEYS[i]+'. '+o).join('. '),
+      ()=>{ if(autoMode&&state.mode==='quiz') runBar(thinkDelay,'⏱ Choose your answer — revealing in','#d97706',autoReveal); },stem);
   } else {
-    speak('Answer '+KEYS[q.a]+'. '+q.o[q.a]+'. '+(q.e||''),()=>{ if(autoMode&&state.mode==='quiz') startCountdown(); });
+    speak('Answer '+KEYS[q.a]+'. '+q.o[q.a]+'. '+(q.e||''),
+      ()=>{ if(autoMode&&state.mode==='quiz') runBar(autoDelay,'Next question in','#15803d',()=>nextQ()); });
   }
 }
 
@@ -829,16 +847,23 @@ function card(q,i,preview){
   el.appendChild(ul);
   const ex=document.createElement('div');ex.className='explain'+(locked?' show':'');
   const right=(ans===q.a);
-  ex.innerHTML=(!preview&&ans!==undefined?`<div class="verdict ${right?'r':'w'}">${right?'✓ Correct':'✗ Incorrect — answer is '+KEYS[q.a]}</div>`:`<div class="verdict r">Answer: ${KEYS[q.a]}</div>`)
+  ex.innerHTML=(!preview&&ans!==undefined?`<div class="verdict ${right?'r':'w'}">${right?'✓ Correct':(ans===-1?'⏱ Revealed — answer is '+KEYS[q.a]:'✗ Incorrect — answer is '+KEYS[q.a])}</div>`:`<div class="verdict r">Answer: ${KEYS[q.a]}</div>`)
     +`<p>${esc(q.e)}</p><div class="ref">▸ ${esc(q.r)}</div>`+relNote(q);
   el.appendChild(ex);
-  if(!preview){const act=document.createElement('div');act.className='actions';
+  if(!preview){
+    const ab=document.createElement('div'); ab.className='autobar'; ab.id='autoBar'; ab.style.display='none';
+    ab.innerHTML='<div class="abtxt" id="abTxt"></div><div class="abtrack"><i id="abFill"></i></div>';
+    el.appendChild(ab);
+    const act=document.createElement('div');act.className='actions';
     const nm=noteFor(q), tbm=tableForQ(q);
     act.innerHTML=`<button class="btn${autoMode?' solid':''}" onclick="toggleAuto()" title="Auto-read the question, then the answer, then move on after the delay">${autoMode?'🔁 Auto on':'🔁 Auto off'}</button>
+      <select onchange="thinkDelay=+this.value;saveAuto()" title="Thinking time after the question is read — the answer reveals itself when it runs out">
+        <option value="30" ${thinkDelay===30?'selected':''}>⏱ Reveal: 30 s</option>
+        <option value="60" ${thinkDelay===60?'selected':''}>⏱ Reveal: 60 s</option></select>
       <select onchange="autoDelay=+this.value;saveAuto()" title="Wait after the answer is read, then flip to the next question">
-        <option value="30" ${autoDelay===30?'selected':''}>30 s</option>
-        <option value="40" ${autoDelay===40?'selected':''}>40 s</option>
-        <option value="60" ${autoDelay===60?'selected':''}>60 s</option></select>
+        <option value="30" ${autoDelay===30?'selected':''}>⏭ Next: 30 s</option>
+        <option value="40" ${autoDelay===40?'selected':''}>⏭ Next: 40 s</option>
+        <option value="60" ${autoDelay===60?'selected':''}>⏭ Next: 60 s</option></select>
       <button class="btn" onclick="speakCard(this)">🔊 Read</button>
       ${ans===undefined?`<button class="btn" onclick="peek(this)">👁 Reveal</button>`:''}
       <button class="btn" onclick="pqEditQ(this)" title="Edit this question in the editor">✎ Edit</button>
