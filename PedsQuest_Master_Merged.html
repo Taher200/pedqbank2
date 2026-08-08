@@ -121,6 +121,27 @@ select,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:
 .autobar .abtxt{font-size:12.5px;font-weight:600;color:var(--accent-d);margin-bottom:7px;font-family:ui-monospace,monospace}
 .autobar .abtrack{height:8px;background:#fff;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
 .autobar .abtrack i{display:block;height:100%;width:100%;border-radius:99px;background:var(--accent);transition:width 1s linear}
+.btn.flg{color:var(--amber)}
+.btn.flg.on{background:#fef3e2;border-color:var(--amber);font-weight:700}
+.matwrap{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.matwrap .mh{display:flex;justify-content:space-between;align-items:center;background:var(--accent-l);padding:8px 13px;font-size:12px;font-family:ui-monospace,monospace;color:var(--accent-d);text-transform:uppercase;letter-spacing:.4px}
+.matwrap .mb{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.matitem{font-size:.9em;line-height:1.5;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.matitem:last-child{border-bottom:0;padding-bottom:0}
+.matitem img{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+.matitem a{color:var(--accent);word-break:break-all}
+#matEd{position:fixed;inset:0;z-index:10001;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:4vh 12px}
+#matEd.show{display:flex}
+#matCard{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:20px 22px;box-shadow:0 20px 60px rgba(15,23,42,.35)}
+#matCard h3{margin:0 0 8px}
+#matCard label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:12px 0 4px}
+#matCard textarea,#matCard input[type=text]{width:100%;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:8px;box-sizing:border-box}
+#matCard textarea{min-height:70px}
+.matrow{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}
+.matrow .mtxt{flex:1;font-size:.9em;word-break:break-word}
+.matrow img{max-width:120px;border-radius:6px}
+.matrow button{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 9px;cursor:pointer}
+.mbtn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer;margin-top:6px}
 .kw{background:linear-gradient(transparent 60%,#ffe39a 60%);border-radius:2px}
 
 /* ---- relevant note attached to a question ---- */
@@ -430,7 +451,7 @@ const STOP=new Set(['and','the','of','in','to','a','with','for','amp','other','b
 
 function topicName(id){return (TOPICS.find(t=>t[0]===id)||[,''])[1]}
 function subList(id){return (TOPICS.find(t=>t[0]===id)||[,,[]])[2]}
-function pool(){return Q.filter(q=>q.t===state.topic&&(!state.sub||q.s===state.sub)&&(state.year==='all'||String(q.y)===state.year)&&(!state.search||(q.q+' '+q.s).toLowerCase().includes(state.search)))}
+function pool(){return Q.filter(q=>q.t===state.topic&&(!state.sub||q.s===state.sub)&&(state.year==='all'||String(q.y)===state.year)&&(!state.search||(q.q+' '+q.s).toLowerCase().includes(state.search))&&(!state.reviewIds||state.reviewIds.has(qid(q))))}
 function teachFor(id){return TEACH.filter(x=>x.t===id)}
 function countTopic(id){return Q.filter(q=>q.t===id).length}
 function countSub(id,s){return Q.filter(q=>q.t===id&&q.s===s).length}
@@ -488,8 +509,8 @@ function buildTOC(){
   document.getElementById('ovrTxt').innerHTML=`<span>Answered <b>${ans}</b>/${tot}</span><span><b>${TEACH.length}</b> notes</span>`;
   document.getElementById('ovrBar').style.width=(tot?100*ans/tot:0)+'%';
 }
-function pickTopic(id){state.topic=id;state.sub=null;state.idx=0;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
-function pickSub(id,s){state.topic=id;state.sub=s;state.idx=0;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
+function pickTopic(id){state.topic=id;state.sub=null;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
+function pickSub(id,s){state.topic=id;state.sub=s;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
 function resetProgress(){if(confirm('Clear all answered/score progress?')){state.answered={};buildTOC();render()}}
 
 // ---------------- top bar ----------------
@@ -498,14 +519,14 @@ function buildBar(){
   ys.innerHTML='<option value="all">All years</option>'+years.map(y=>`<option value="${y}">${y} recalls</option>`).join('');
   ys.value=state.year;
 }
-function setMode(m){state.mode=m;state.idx=0;stopSpeak();stopSlides();
+function setMode(m){state.mode=m;state.idx=0;state.secDone=false;stopSpeak();stopSlides();
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   const hideFilters=(m==='learn'||m==='tables');
   document.getElementById('yearSel').style.display=hideFilters?'none':'';
   document.getElementById('search').style.display=hideFilters?'none':'';
   render();
 }
-function onSearch(){state.search=document.getElementById('search').value.trim().toLowerCase();state.idx=0;render()}
+function onSearch(){state.search=document.getElementById('search').value.trim().toLowerCase();state.idx=0;state.secDone=false;render()}
 function onSbSearch(){state.sbq=document.getElementById('sbSearch').value.trim().toLowerCase();buildTOC()}
 
 // ---------------- quiz auto-read & auto-advance ----------------
@@ -545,6 +566,101 @@ function maybeAuto(list){
     speak('Answer '+KEYS[q.a]+'. '+q.o[q.a]+'. '+(q.e||''),
       ()=>{ if(autoMode&&state.mode==='quiz') runBar(autoDelay,'Next question in','#15803d',()=>nextQ()); });
   }
+}
+
+// ---------------- flags & learning materials ----------------
+let FLAGS={}, MATS={};
+try{FLAGS=JSON.parse(localStorage.getItem('pq_flags_v1')||'{}')||{}}catch(e){}
+try{MATS=JSON.parse(localStorage.getItem('pq_mats_v1')||'{}')||{}}catch(e){}
+function saveFlags(){try{localStorage.setItem('pq_flags_v1',JSON.stringify(FLAGS))}catch(e){}}
+function saveMats(){try{localStorage.setItem('pq_mats_v1',JSON.stringify(MATS))}catch(e){alert('Browser storage is full — try a smaller image or delete some materials.')}}
+function isFlagged(q){return !!FLAGS[qid(q)]}
+function toggleFlag(btn){const q=btn.closest('.card')._q; if(!q)return;
+  const k=qid(q); if(FLAGS[k])delete FLAGS[k]; else FLAGS[k]=1; saveFlags(); render();}
+function matsFor(q){return MATS[qid(q)]||[]}
+function matHtml(q){
+  const ms=matsFor(q); if(!ms.length)return '';
+  return '<div class="matwrap"><div class="mh"><span>📎 Learning materials · '+ms.length+'</span>'
+    +'<button onclick="openMats(this)" style="font:inherit;font-size:11px;border:1px solid #c5d3ef;background:#fff;color:var(--accent-d);border-radius:7px;padding:3px 9px;cursor:pointer;text-transform:none;letter-spacing:0">Edit</button></div>'
+    +'<div class="mb">'+ms.map(m=>{
+      if(m.k==='img')return '<div class="matitem"><img src="'+m.v+'" alt="attached learning material"></div>';
+      if(m.k==='link')return '<div class="matitem">🔗 <a href="'+esc(m.v)+'" target="_blank" rel="noopener">'+esc(m.label||m.v)+'</a></div>';
+      return '<div class="matitem">'+esc(m.v)+'</div>';
+    }).join('')+'</div></div>';
+}
+let matQ=null;
+function openMats(btn){const q=btn.closest('.card')._q; if(!q)return; matQ=q; paintMats(); document.getElementById('matEd').classList.add('show');}
+function closeMats(){document.getElementById('matEd').classList.remove('show'); matQ=null; render();}
+function paintMats(){
+  const host=document.getElementById('matList'); const ms=matsFor(matQ);
+  document.getElementById('matStem').textContent=matQ.q.slice(0,140)+(matQ.q.length>140?'…':'');
+  host.innerHTML=ms.length?'':'<div style="color:var(--muted);font-size:13px">Nothing attached yet — add a note, link or image below.</div>';
+  ms.forEach((m,i)=>{
+    const row=document.createElement('div'); row.className='matrow';
+    if(m.k==='img'){row.innerHTML='<img src="'+m.v+'"><span class="mtxt">image</span>';}
+    else{row.innerHTML='<span class="mtxt">'+(m.k==='link'?'🔗 ':'')+esc(m.label||m.v)+'</span>';}
+    const eb=document.createElement('button'); eb.textContent='✎'; eb.title='Edit';
+    eb.onclick=()=>{ if(m.k==='img'){alert('Images cannot be edited — delete and upload a new one.');return}
+      const nv=prompt(m.k==='link'?'Edit link URL':'Edit note',m.v); if(nv===null)return;
+      m.v=nv.trim();
+      if(m.k==='link'){const nl=prompt('Edit link label (optional)',m.label||''); if(nl!==null)m.label=nl.trim();}
+      saveMats(); paintMats(); };
+    const db=document.createElement('button'); db.textContent='🗑'; db.title='Delete';
+    db.onclick=()=>{ ms.splice(i,1); if(!ms.length)delete MATS[qid(matQ)]; saveMats(); paintMats(); };
+    row.appendChild(eb); row.appendChild(db); host.appendChild(row);
+  });
+}
+function matAdd(kind){
+  if(!matQ)return; const k=qid(matQ); MATS[k]=MATS[k]||[];
+  if(kind==='note'){const v=document.getElementById('matNote').value.trim(); if(!v)return;
+    MATS[k].push({k:'note',v}); document.getElementById('matNote').value='';}
+  if(kind==='link'){const v=document.getElementById('matLink').value.trim(); if(!v)return;
+    const label=document.getElementById('matLabel').value.trim();
+    MATS[k].push({k:'link',v:v,label:label}); document.getElementById('matLink').value='';document.getElementById('matLabel').value='';}
+  saveMats(); paintMats();
+}
+function matFileAdd(inp){
+  const f=inp.files[0]; if(!f||!matQ)return;
+  if(f.size>900*1024){alert('Image larger than 900 KB — please use a smaller image (browser storage is limited).');inp.value='';return}
+  const rd=new FileReader(); rd.onload=()=>{const k=qid(matQ); (MATS[k]=MATS[k]||[]).push({k:'img',v:rd.result}); saveMats(); paintMats();};
+  rd.readAsDataURL(f); inp.value='';
+}
+
+// ---------------- end-of-section review ----------------
+function sectionSummary(head,c,list){
+  const wrong=list.filter(q=>{const a=state.answered[qid(q)];return a!==undefined&&a!==q.a});
+  const right=list.filter(q=>state.answered[qid(q)]===q.a);
+  const flg=list.filter(isFlagged);
+  head.innerHTML=`<div class="crumb">${esc(topicName(state.topic))}</div><h2>Section complete ✔</h2><p>${esc(state.sub||'All subtopics')} · ${right.length}/${list.length} correct${flg.length?' · ⚑ '+flg.length+' flagged':''}</p>`;
+  const sc=document.createElement('div'); sc.className='card';
+  sc.innerHTML='<div class="score-big">'+right.length+'/'+list.length+' · '+Math.round(100*right.length/Math.max(1,list.length))+'%</div>'
+    +'<div class="actions" style="margin-top:12px">'
+    +(wrong.length?'<button class="btn solid" onclick="retryWrong()">↺ Retry the '+wrong.length+' wrong</button>':'')
+    +(flg.length?'<button class="btn flg on" onclick="reviewFlagged()">⚑ Redo '+flg.length+' flagged</button>':'')
+    +'<button class="btn" onclick="restartSection()">Restart section</button>'
+    +'<button class="btn" onclick="state.secDone=false;state.reviewIds=null;openStart()">Pick another topic</button></div>';
+  c.appendChild(sc);
+  if(wrong.length){
+    const hd=document.createElement('div'); hd.className='tblhdr'; hd.textContent='Questions you got wrong — review'; c.appendChild(hd);
+    wrong.forEach((q,i)=>c.appendChild(card(q,i,true)));
+  } else {
+    const ok=document.createElement('div'); ok.className='learnhint'; ok.innerHTML='<b>🎉 Nothing wrong in this section.</b> Flag tricky ones as you go and they will be listed here.'; c.appendChild(ok);
+  }
+}
+function retryWrong(){
+  const l=pool(); const wrong=l.filter(q=>{const a=state.answered[qid(q)];return a!==undefined&&a!==q.a});
+  if(!wrong.length)return;
+  const ids=new Set(wrong.map(qid)); wrong.forEach(q=>{delete state.answered[qid(q)]});
+  state.reviewIds=ids; state.idx=0; state.secDone=false; buildTOC(); render(); window.scrollTo({top:0});
+}
+function reviewFlagged(){
+  const l=pool().filter(isFlagged); if(!l.length)return;
+  l.forEach(q=>{delete state.answered[qid(q)]});
+  state.reviewIds=new Set(l.map(qid)); state.idx=0; state.secDone=false; buildTOC(); render(); window.scrollTo({top:0});
+}
+function restartSection(){
+  state.reviewIds=null; const l=pool(); l.forEach(q=>{delete state.answered[qid(q)]});
+  state.idx=0; state.secDone=false; buildTOC(); render(); window.scrollTo({top:0});
 }
 
 // ---------------- RANDOM TEST (30 Q across the whole bank) ----------------
@@ -646,6 +762,7 @@ function render(){
   head.innerHTML=`<div class="crumb">${esc(topicName(state.topic))}</div><h2>${esc(state.sub||'All subtopics')}</h2><p>${list.length} question${list.length!==1?'s':''} ${state.year!=='all'?'· '+state.year+' recalls':''}</p>`;
   if(!list.length){c.innerHTML='<div class="empty">No questions match. Clear the search or year filter.</div>';return}
   if(state.mode==='preview'){ list.forEach((q,i)=>c.appendChild(card(q,i,true))); }
+  else if(state.secDone){ sectionSummary(head,c,list); }
   else { if(state.idx>=list.length)state.idx=0; c.appendChild(card(q=list[state.idx],state.idx,false)); updateProgress(list); maybeAuto(list); }
 }
 
@@ -703,7 +820,7 @@ function tableForQ(q){
     tw.forEach(w=>{if(qw.has(w))sc++});
     const tws=new Set(tw); sw.forEach(w=>{if(tws.has(w))sc+=2});
     if(sc>bs){bs=sc;best=tb}});
-  return bs>0?best:null;
+  return bs>0?best:(tbs.length?tbs[0]:null);
 }
 function openTableI(i){
   const tb=TABLES[i]; if(!tb) return;
@@ -850,6 +967,8 @@ function card(q,i,preview){
   ex.innerHTML=(!preview&&ans!==undefined?`<div class="verdict ${right?'r':'w'}">${right?'✓ Correct':(ans===-1?'⏱ Revealed — answer is '+KEYS[q.a]:'✗ Incorrect — answer is '+KEYS[q.a])}</div>`:`<div class="verdict r">Answer: ${KEYS[q.a]}</div>`)
     +`<p>${esc(q.e)}</p><div class="ref">▸ ${esc(q.r)}</div>`+relNote(q);
   el.appendChild(ex);
+  const _mh=matHtml(q);
+  if(_mh){const _md=document.createElement('div'); _md.innerHTML=_mh; el.appendChild(_md.firstChild);}
   if(!preview){
     const ab=document.createElement('div'); ab.className='autobar'; ab.id='autoBar'; ab.style.display='none';
     ab.innerHTML='<div class="abtxt" id="abTxt"></div><div class="abtrack"><i id="abFill"></i></div>';
@@ -867,6 +986,8 @@ function card(q,i,preview){
       <button class="btn" onclick="speakCard(this)">🔊 Read</button>
       ${ans===undefined?`<button class="btn" onclick="peek(this)">👁 Reveal</button>`:''}
       <button class="btn" onclick="pqEditQ(this)" title="Edit this question in the editor">✎ Edit</button>
+      <button class="btn flg${isFlagged(q)?' on':''}" onclick="toggleFlag(this)" title="Flag this question — flagged ones are listed in the end-of-section review">⚑ ${isFlagged(q)?'Flagged':'Flag'}</button>
+      <button class="btn" onclick="openMats(this)" title="Attach notes, links or images to this question">📎${matsFor(q).length?' '+matsFor(q).length:''}</button>
       ${nm?`<button class="btn lrn" onclick="openNote('${esc(nm.name).replace(/'/g,"\\'")}')">📖 Learn this</button>`:''}
       ${tbm?`<button class="btn lrn" onclick="openTableI(${TABLES.indexOf(tbm)})">📊 Table</button>`:''}
       <button class="btn" onclick="prevQ()" ${state.idx===0?'disabled':''}>← Prev</button>
@@ -877,7 +998,9 @@ function card(q,i,preview){
 }
 function peek(btn){const q=btn.closest('.card')._q; if(state.answered[qid(q)]===undefined){state.answered[qid(q)]=-1;render()}}
 function prevQ(){if(state.idx>0){state.idx--;stopSpeak();render();window.scrollTo({top:0,behavior:'smooth'})}}
-function nextQ(){const l=pool();state.idx=(state.idx+1)%l.length;stopSpeak();render();window.scrollTo({top:0,behavior:'smooth'})}
+function nextQ(){const l=pool();
+  if(state.idx>=l.length-1){state.secDone=true;stopSpeak();render();window.scrollTo({top:0,behavior:'smooth'});return}
+  state.idx++;stopSpeak();render();window.scrollTo({top:0,behavior:'smooth'})}
 function updateProgress(list){const p=document.getElementById('prog');p.style.display='flex';
   const seen=list.filter(q=>state.answered[qid(q)]!==undefined&&state.answered[qid(q)]!==-1).length;
   const right=list.filter(q=>state.answered[qid(q)]===q.a).length;
@@ -1068,6 +1191,21 @@ function closeStart(){document.getElementById('startOv').classList.remove('show'
 #pqEd .tabsE{display:flex;gap:8px;margin-bottom:10px}
 #pqEd .tabsE .btn.on{background:#f6b756;color:#111}
 </style>
+<div id="matEd" onclick="if(event.target===this)closeMats()">
+ <div id="matCard">
+  <h3>📎 Learning materials for this question</h3>
+  <div id="matStem" style="font-size:13px;color:var(--muted);margin-bottom:8px"></div>
+  <div id="matList"></div>
+  <label>Add a note</label><textarea id="matNote" placeholder="Key point, mnemonic, CPS pearl…"></textarea>
+  <button class="mbtn" onclick="matAdd('note')">+ Add note</button>
+  <label>Add a link</label><input type="text" id="matLink" placeholder="https://cps.ca/…">
+  <input type="text" id="matLabel" placeholder="Label (optional)" style="margin-top:5px">
+  <button class="mbtn" onclick="matAdd('link')">+ Add link</button>
+  <label>Attach an image (≤900 KB — figures, algorithms, tables)</label>
+  <input type="file" id="mfInput" accept="image/*" onchange="matFileAdd(this)">
+  <div style="margin-top:16px;text-align:right"><button style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;font:inherit;cursor:pointer" onclick="closeMats()">Close</button></div>
+ </div>
+</div>
 <button id="pqEditBtn" title="Add / edit questions">✎ Editor</button>
 <div id="pqEd"><div class="card">
  <h3>Question editor <span class="muted" id="pqStats"></span></h3>
