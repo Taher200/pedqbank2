@@ -1,0 +1,23 @@
+{
+ "name": "PedsQuest Master \u2014 Pediatric Board Q-Bank",
+ "short_name": "PedsQuest",
+ "description": "Merged pediatric board q-bank: quiz, learn, flashcards, tables, slides, dashboard.",
+ "start_url": "./PedsQuest_Master_Merged.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f4f7fd",
+ "theme_color": "#2563eb",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}

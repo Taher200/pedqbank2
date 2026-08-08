@@ -2,6 +2,14 @@
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PedsQuest Master — Merged Pediatric Board Q-Bank</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PedsQuest">
 <style>
 :root{
   --ink:#1a2233; --paper:#f4f7fd; --card:#ffffff; --line:#dde3ee;
@@ -157,6 +165,22 @@ select,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:
 .dweak button{font:inherit;font-size:11.5px;border:1px solid #f0c9c6;background:#fdeaea;color:var(--bad);border-radius:30px;padding:3px 10px;cursor:pointer;margin:2px 3px 0 0}
 #startCard .chip.sec{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
 #startCard .chip.sec:hover{background:var(--accent-d)}
+#userOv{position:fixed;inset:0;z-index:12000;background:rgba(15,23,42,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
+#userCard{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(15,23,42,.4);max-width:440px;width:100%;padding:26px 28px;animation:pop .3s cubic-bezier(.2,.9,.3,1.2)}
+#userCard h2{margin:0 0 4px;font-size:1.35em;color:var(--ink)}
+#userCard p{margin:0 0 14px;font-size:13.5px;color:var(--muted)}
+#userCard .uchips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+#userCard .uchip{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--accent-l);color:var(--accent-d);border-radius:999px;padding:8px 16px;font-weight:600;cursor:pointer}
+#userCard .uchip:hover{background:var(--accent);color:#fff}
+#userCard input{width:100%;font:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-sizing:border-box}
+#userCard .urow{display:flex;gap:8px;margin-top:12px}
+#userCard .ugo{flex:1;font:inherit;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+#userCard .ugo:hover{background:var(--accent-d)}
+#userCard .uguest{font:inherit;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:10px;padding:10px 14px;cursor:pointer}
+#startUser{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 10px;flex-wrap:wrap}
+#startUser b{color:var(--accent-d)}
+#startUser button{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;color:var(--muted)}
+#startUser button:hover{border-color:var(--accent);color:var(--accent)}
 .kw{background:linear-gradient(transparent 60%,#ffe39a 60%);border-radius:2px}
 
 /* ---- relevant note attached to a question ---- */
@@ -470,9 +494,59 @@ function pickSectionI(i){pickSection(SECTIONS[i][0]);}
   TEACH.forEach(t=>{ if(m[t.name]){ t.algo=m[t.name].algo; t.pp=m[t.name].pp; } });
 })();
 
+// ---------------- user profiles (per-user progress tracking) ----------------
+let PQ_USER='';
+try{PQ_USER=localStorage.getItem('pq_user')||''}catch(e){}
+function ukey(k){return PQ_USER?('pq_u_'+PQ_USER+'_'+k):k}
+function pqUsers(){try{return JSON.parse(localStorage.getItem('pq_users')||'[]')||[]}catch(e){return []}}
+function switchUser(){try{localStorage.removeItem('pq_user')}catch(e){}; location.reload();}
+function chooseUser(name){
+  name=(name||'').trim().replace(/[^\w \-\u0600-\u06FF]/g,'').slice(0,24);
+  if(!name)return;
+  const us=pqUsers();
+  if(!us.includes(name)){
+    if(!us.length){ // first profile inherits any existing single-user progress
+      ['pq_answers_v1','pq_flags_v1','pq_mats_v1'].forEach(k=>{
+        try{const v=localStorage.getItem(k); if(v&&!localStorage.getItem('pq_u_'+name+'_'+k))localStorage.setItem('pq_u_'+name+'_'+k,v)}catch(e){}
+      });
+    }
+    us.push(name);
+    try{localStorage.setItem('pq_users',JSON.stringify(us))}catch(e){}
+  }
+  try{localStorage.setItem('pq_user',name)}catch(e){}
+  location.reload();
+}
+function initUser(){
+  if(PQ_USER)return;
+  const us=pqUsers();
+  const ov=document.createElement('div');
+  ov.id='userOv';
+  ov.innerHTML='<div id="userCard"><h2>👤 Who is studying?</h2>'
+    +'<p>Each profile keeps its own progress, flags and materials on this device.</p>'
+    +(us.length?'<div class="uchips">'+us.map(u=>'<button class="uchip" onclick="chooseUser(\''+u.replace(/'/g,"\\'")+'\')">'+esc(u)+'</button>').join('')+'</div>':'')
+    +'<input type="text" id="userName" placeholder="Your name (e.g. Taher)" maxlength="24">'
+    +'<div class="urow"><button class="ugo" onclick="chooseUser(document.getElementById(\'userName\').value)">Start studying →</button>'
+    +'<button class="uguest" onclick="this.closest(\'#userOv\').remove()">Continue as guest</button></div></div>';
+  document.body.appendChild(ov);
+  const inp=document.getElementById('userName');
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')chooseUser(inp.value)});
+}
+
+// ---------------- install as an app (PWA) ----------------
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+function installApp(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;return;}
+  const ua=navigator.userAgent;
+  if(/iPhone|iPad|iPod/.test(ua)) alert('On iPhone / iPad:\n1. Open this page in Safari\n2. Tap the Share button\n3. Tap "Add to Home Screen"\n\nThe app opens full-screen with its own icon.');
+  else if(location.protocol!=='https:') alert('Install works from the online version. Open:\nhttps://taher200.github.io/pedqbank/PedsQuest_Master_Merged.html\nthen use the browser menu → "Install app".');
+  else alert('In Chrome / Edge: open the browser menu (⋮) and choose "Install app" (or "Apps → Install this site as an app").\nOn Android Chrome: menu → "Add to Home screen".');
+}
+if('serviceWorker' in navigator && location.protocol==='https:'){ try{navigator.serviceWorker.register('sw.js')}catch(e){} }
+
 let state={mode:'quiz',topic:TOPICS[0][0],sub:null,sec:null,year:'all',search:'',sbq:'',answered:{},idx:0};
-try{const _pa=JSON.parse(localStorage.getItem('pq_answers_v1')||'null'); if(_pa&&typeof _pa==='object')state.answered=_pa;}catch(e){}
-function saveAnswers(){try{localStorage.setItem('pq_answers_v1',JSON.stringify(state.answered))}catch(e){}}
+try{const _pa=JSON.parse(localStorage.getItem(ukey('pq_answers_v1'))||'null'); if(_pa&&typeof _pa==='object')state.answered=_pa;}catch(e){}
+function saveAnswers(){try{localStorage.setItem(ukey('pq_answers_v1'),JSON.stringify(state.answered))}catch(e){}}
 const years=[...new Set(Q.map(q=>q.y).filter(Boolean))].sort((a,b)=>b-a);
 const KEYS=['A','B','C','D','E'];
 const STOP=new Set(['and','the','of','in','to','a','with','for','amp','other','by','on','its']);
@@ -539,7 +613,7 @@ function buildTOC(){
 }
 function pickTopic(id){state.sec=null;state.topic=id;state.sub=null;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
 function pickSub(id,s){state.sec=null;state.topic=id;state.sub=s;state.idx=0;state.secDone=false;state.reviewIds=null;stopSpeak();stopSlides();buildTOC();render();toggleMenu(false)}
-function resetProgress(){if(confirm('Clear all answered/score progress?')){state.answered={};try{localStorage.removeItem('pq_answers_v1')}catch(e){};buildTOC();render()}}
+function resetProgress(){if(confirm('Clear all answered/score progress?')){state.answered={};try{localStorage.removeItem(ukey('pq_answers_v1'))}catch(e){};buildTOC();render()}}
 
 // ---------------- top bar ----------------
 function buildBar(){
@@ -637,10 +711,10 @@ function renderDash(head,c){
 
 // ---------------- flags & learning materials ----------------
 let FLAGS={}, MATS={};
-try{FLAGS=JSON.parse(localStorage.getItem('pq_flags_v1')||'{}')||{}}catch(e){}
-try{MATS=JSON.parse(localStorage.getItem('pq_mats_v1')||'{}')||{}}catch(e){}
-function saveFlags(){try{localStorage.setItem('pq_flags_v1',JSON.stringify(FLAGS))}catch(e){}}
-function saveMats(){try{localStorage.setItem('pq_mats_v1',JSON.stringify(MATS))}catch(e){alert('Browser storage is full — try a smaller image or delete some materials.')}}
+try{FLAGS=JSON.parse(localStorage.getItem(ukey('pq_flags_v1'))||'{}')||{}}catch(e){}
+try{MATS=JSON.parse(localStorage.getItem(ukey('pq_mats_v1'))||'{}')||{}}catch(e){}
+function saveFlags(){try{localStorage.setItem(ukey('pq_flags_v1'),JSON.stringify(FLAGS))}catch(e){}}
+function saveMats(){try{localStorage.setItem(ukey('pq_mats_v1'),JSON.stringify(MATS))}catch(e){alert('Browser storage is full — try a smaller image or delete some materials.')}}
 function isFlagged(q){return !!FLAGS[qid(q)]}
 function toggleFlag(btn){const q=btn.closest('.card')._q; if(!q)return;
   const k=qid(q); if(FLAGS[k])delete FLAGS[k]; else FLAGS[k]=1; saveFlags(); render();}
@@ -1205,7 +1279,7 @@ function setFont(d){fontI=Math.max(0,Math.min(fontSteps.length-1,fontI+d));apply
   try{if(localStorage.getItem('iq_collapsed')==='1'&&window.innerWidth>860)document.querySelector('.app').classList.add('collapsed')}catch(e){}
 })();
 
-buildTOC();buildBar();render();
+buildTOC();buildBar();render();initUser();
 
 </script>
 
@@ -1234,6 +1308,7 @@ buildTOC();buildBar();render();
   <button id="startClose" onclick="closeStart()">✕ Close</button>
   <h2><span class="dot2"></span>PedsQuest Master</h2>
   <div class="sub2">Merged pediatric board q-bank · pick a study mode, then a topic to begin</div>
+  <div id="startUser"></div>
   <div class="modes" id="startModes"></div>
   <div id="startSecs"></div>
  </div>
@@ -1243,7 +1318,7 @@ function openStart(){document.getElementById('startOv').classList.add('show')}
 function closeStart(){document.getElementById('startOv').classList.remove('show')}
 (function buildStart(){
   const modes=[['quiz','📝 Quiz'],['learn','📖 Learn'],['cards','🃏 Flashcards'],['tables','📊 Tables'],['slides','🎞 Slides']];
-  document.getElementById('startModes').innerHTML='<button class="tstbtn" onclick="startTest(30)" style="background:var(--accent);color:#fff;border-color:var(--accent)">🎯 Do my test · 30 random Qs</button>'+'<button onclick="setMode(&quot;dash&quot;);closeStart()">📈 Dashboard</button>'+modes.map(m=>`<button onclick="setMode('${m[0]}');closeStart()">${m[1]}</button>`).join('');
+  document.getElementById('startModes').innerHTML='<button class="tstbtn" onclick="startTest(30)" style="background:var(--accent);color:#fff;border-color:var(--accent)">🎯 Do my test · 30 random Qs</button>'+'<button onclick="setMode(&quot;dash&quot;);closeStart()">📈 Dashboard</button>'+'<button onclick="installApp()" title="Install PedsQuest as an app on this device">📲 Install app</button>'+modes.map(m=>`<button onclick="setMode('${m[0]}');closeStart()">${m[1]}</button>`).join('');
   let hh='';
   SECTIONS.forEach(([label,ids],si)=>{
     const secN=ids.reduce((s,id)=>s+countTopic(id),0);
@@ -1251,6 +1326,8 @@ function closeStart(){document.getElementById('startOv').classList.remove('show'
     if(chips) hh+=`<div class="grp">${esc(label)}</div><div class="chips"><button class="chip sec" onclick="pickSectionI(${si});closeStart()">▶ Whole section · ${secN} Q</button>${chips}</div>`;
   });
   document.getElementById('startSecs').innerHTML=hh;
+  const su=document.getElementById('startUser');
+  if(su)su.innerHTML='👤 Studying as <b>'+esc(PQ_USER||'guest')+'</b><button onclick="switchUser()">Switch user</button><button onclick="installApp()">📲 Install app</button>';
   openStart();
 })();
 </script>
