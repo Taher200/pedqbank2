@@ -111,6 +111,10 @@ h2{font-size:1.2em;margin:18px 0 10px}
 .casefb.plausible{background:var(--amber-l);color:var(--amber);border:1px solid #f3d199}
 .casefb.wrong{background:var(--bad-l);color:var(--bad);border:1px solid #f0c9c6}
 .casedot{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:6px}
+.examrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.examrow select{font:inherit;font-size:13.5px;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff;color:var(--ink)}
+.examrow label{font-weight:700;color:var(--muted)}
+.bkrow .cnt{width:74px;text-align:right;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -141,6 +145,22 @@ h2{font-size:1.2em;margin:18px 0 10px}
         <button class="flagbtn hidden" id="planMic" onclick="planVoiceSearch()" title="Search by voice">🎙️</button>
       </div>
     </div>
+    <div class="card" id="examCard">
+      <h2 style="margin-top:0">🎲 Random mock exam</h2>
+      <p style="color:var(--muted);font-size:13px;margin-top:0">A shuffled exam drawn from the whole bank, scored at the end with a strengths &amp; weaknesses report by system.</p>
+      <div class="examrow">
+        <label for="examCount" style="font-size:13px">Questions</label>
+        <select id="examCount">
+          <option>50</option>
+          <option selected>100</option>
+          <option>150</option>
+          <option>200</option>
+        </select>
+        <button class="btn solid" id="examStartBtn" onclick="startExamFromCard()">Start exam</button>
+        <button class="btn good hidden" id="examResumeBtn" onclick="resumeExam()">Resume exam</button>
+        <span id="examLastNote" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
     <div class="daygrid" id="dayGrid"></div>
   </div>
 
@@ -158,6 +178,12 @@ h2{font-size:1.2em;margin:18px 0 10px}
       <p style="color:var(--muted);font-size:13px;margin-top:0">"Wasted" time is counted whenever this tab is hidden (you switched away) or when there's been no click/keypress/scroll for 60 seconds while it's open.</p>
       <div class="statrow" id="dashTime"></div>
       <div class="breakdown" id="dashTimeByDay"></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Mock exams</h2>
+      <div class="statrow" id="dashExam"></div>
+      <div class="breakdown" id="dashExamReport"></div>
+      <div class="breakdown" id="dashExamHistory"></div>
     </div>
     <div class="card">
       <h2 style="margin-top:0">Materials</h2>
@@ -252,10 +278,13 @@ function saveTime(){ saveJSON(LS_TIME,TIME); }
 function saveFlags(){ saveJSON(LS_FLAGS,FLAGS); }
 
 // ---------------- added feature state: materials, prefs, case progress ----------------
-const LS_MATS='prev26_mats_v1', LS_PREFS='prev26_prefs_v1', LS_CASEPROG='prev26_caseprog_v1';
+const LS_MATS='prev26_mats_v1', LS_PREFS='prev26_prefs_v1', LS_CASEPROG='prev26_caseprog_v1', LS_EXAM='prev26_exam_v1';
 let MATS=loadJSON(LS_MATS,{});          // {qid: [{type:'img'|'note', data, ts}]}
 let PREFS=loadJSON(LS_PREFS,{voiceURI:null, rate:1, autoRead:false});
 let CASEPROG=loadJSON(LS_CASEPROG,{});  // {caseId: {done, correct, total, answers:{stepId:optIdx}}}
+let EXAM=loadJSON(LS_EXAM,{inProgress:null, last:null, history:[]}); // random bank-wide mock exams
+function saveExam(){ try{ localStorage.setItem(LS_EXAM, JSON.stringify(EXAM)); return true; }
+  catch(e){ if(e && (e.name==='QuotaExceededError'||/quota/i.test(e.message||''))) toast('Storage full — delete some images or notes'); return false; } }
 function saveMats(){ try{ localStorage.setItem(LS_MATS, JSON.stringify(MATS)); return true; }
   catch(e){ if(e && (e.name==='QuotaExceededError' || /quota/i.test(e.message||''))) toast('Storage full — delete some images or notes'); else toast('Could not save.'); return false; } }
 function savePrefs(){ try{ localStorage.setItem(LS_PREFS, JSON.stringify(PREFS)); }catch(e){} }
@@ -290,7 +319,7 @@ function showView(v){
   $('tabDash').classList.toggle('active', v==='dash');
   $('tabCases').classList.toggle('active', v==='cases'||v==='case');
   if(v!=='quiz') try{stopNarration()}catch(e){}
-  if(v==='plan') renderPlan();
+  if(v==='plan'){ renderPlan(); try{renderExamCard()}catch(e){} }
   if(v==='dash'){ renderDash(); try{renderDashExtras()}catch(e){} }
   if(v==='cases') try{renderCases()}catch(e){}
   if(v!=='day' && v!=='quiz') VIEW_DAY=null;
@@ -460,6 +489,7 @@ function renderQuiz(){
   });
   QUIZ.revealed=false;
   mountAttach(qi,'attachHost');
+  if(QUIZ.isExam && EXAM.inProgress){ EXAM.inProgress.pos=QUIZ.pos; saveExam(); }
   if(prior){ // already answered previously — show immediately
     revealAnswer(qi, prior.choice, true);
   } else if(NARRATE_ON){
@@ -503,6 +533,7 @@ function nextQuestion(){
   renderQuiz();
 }
 function finishQuiz(){
+  if(QUIZ && QUIZ.isExam){ finishExam(); return; }
   const p=dayProg(QUIZ.day);
   let correct=0, wrong=0, wrongList=[];
   QUIZ.idxList.forEach(qi=>{ const rec=p.answered[qi]; if(rec){ if(rec.correct)correct++; else {wrong++; wrongList.push(qi);} } });
@@ -971,6 +1002,153 @@ function renderDashExtras(){
       <div style="width:84px;text-align:right;font-size:12px">${pr&&pr.done?pr.correct+'/'+pr.total:'Not done'}</div>`;
     cl.appendChild(row);
   });
+  try{ renderExamDash(); }catch(e){}
+}
+
+/* ---- Random bank-wide mock exam + strengths/weaknesses report ---- */
+let TOPIC_DAY=null;
+function buildTopicDay(){
+  TOPIC_DAY={};
+  DAY_PLAN.forEach(d=>{ if(d.review) return;
+    (d.topics||[]).forEach(t=>{ if(!TOPIC_DAY[t]) TOPIC_DAY[t]={day:d.day, title:d.title}; });
+  });
+}
+function examSystemFor(qi){
+  if(!TOPIC_DAY) buildTopicDay();
+  const q=DATA.questions[qi]; if(!q) return {key:'?', name:'Uncategorised'};
+  const m=TOPIC_DAY[q.t];
+  if(m) return {key:'d'+m.day, name:'Day '+m.day+': '+m.title};
+  return {key:'t:'+q.t, name:(TOPIC_NAME[q.t]||q.t)};
+}
+function startExamFromCard(){
+  const n=parseInt(($('examCount')&&$('examCount').value)||'100',10)||100;
+  startExam(n);
+}
+function startExam(n){
+  const total=DATA.questions.length;
+  n=Math.max(1, Math.min(n||100, total));
+  const all=[]; for(let i=0;i<total;i++) all.push(i);
+  const idx=shuffle(all).slice(0,n);
+  PROG['_exam']={answered:{}, done:false};      // isolated scratch bucket, cleared each run
+  saveProg();
+  EXAM.inProgress={ idxList:idx, pos:0, startedTs:Date.now(), count:n };
+  saveExam();
+  VIEW_DAY=null;
+  QUIZ={ day:'_exam', idxList:idx, pos:0, correctCount:0, wrongIdx:[], revealed:false, isExam:true };
+  showViewRaw('quiz'); renderQuiz();
+}
+function resumeExam(){
+  const ip=EXAM.inProgress;
+  if(!ip || !ip.idxList || !ip.idxList.length){ toast('No exam to resume.'); renderExamCard(); return; }
+  VIEW_DAY=null;
+  QUIZ={ day:'_exam', idxList:ip.idxList.slice(), pos:Math.min(ip.pos||0, ip.idxList.length-1), correctCount:0, wrongIdx:[], revealed:false, isExam:true };
+  showViewRaw('quiz'); renderQuiz();
+}
+function finishExam(){
+  if(QUIZ && QUIZ.isReview){ stopNarration(); toast('Review complete.'); showView('dash'); return; }
+  const p=dayProg('_exam');
+  const idxList=QUIZ.idxList;
+  let correct=0, wrong=0, unanswered=0, wrongIdx=[];
+  const bySys={};
+  idxList.forEach(qi=>{
+    const rec=p.answered[qi];
+    const sys=examSystemFor(qi);
+    bySys[sys.key]=bySys[sys.key]||{name:sys.name, c:0, w:0, n:0};
+    bySys[sys.key].n++;
+    if(!rec){ unanswered++; return; }
+    if(rec.correct){ correct++; bySys[sys.key].c++; }
+    else { wrong++; wrongIdx.push(qi); bySys[sys.key].w++; }
+  });
+  const answered=correct+wrong;
+  const pct=answered?Math.round(100*correct/answered):0;
+  const rows=Object.keys(bySys).map(k=>{ const v=bySys[k]; const a=v.c+v.w;
+    return {name:v.name, pct:a?Math.round(100*v.c/a):0, c:v.c, a:a, n:v.n}; })
+    .filter(r=>r.a>0).sort((x,y)=>x.pct-y.pct || y.a-x.a);
+  const strong=rows.filter(r=>r.pct>=70).slice(-3).reverse();
+  const weak=rows.filter(r=>r.pct<55);
+
+  const res={ ts:Date.now(), count:idxList.length, answered, correct, wrong, unanswered, pct,
+    bySys:rows, wrongIdx };
+  EXAM.inProgress=null;
+  EXAM.last=res;
+  EXAM.history=[{ts:res.ts, count:res.count, correct, answered, pct}].concat(EXAM.history||[]).slice(0,20);
+  saveExam();
+
+  const barColor=v=>v>=70?'#15803d':v>=50?'#d97706':'#b91c1c';
+  $('resultArea').innerHTML=`
+    <div class="score">${pct}%</div>
+    <div style="color:var(--muted);margin-bottom:10px">${correct} correct / ${wrong} wrong${unanswered?` / ${unanswered} skipped`:''} — random ${idxList.length}-question mock exam</div>
+    <div class="qactions" style="justify-content:center">
+      ${wrongIdx.length?`<button class="btn bad" onclick="reviewExamWrong()">Review ${wrongIdx.length} wrong</button>`:''}
+      <button class="btn solid" onclick="startExam(${idxList.length})">New ${idxList.length}-question exam</button>
+      <button class="btn ghost" onclick="showView('plan')">Back to plan</button>
+      <button class="btn ghost" onclick="showView('dash')">See full report</button>
+    </div>
+    <div class="breakdown">
+      <h3>Weakest areas</h3>
+      ${weak.length? weak.map(r=>`<div class="bkrow"><div class="name">${esc(r.name)}</div>
+        <div class="barwrap bar"><div style="width:${r.pct}%;background:${barColor(r.pct)}"></div></div>
+        <div class="cnt">${r.c}/${r.a}${r.a<r.n?` of ${r.n}`:''}</div></div>`).join('')
+        : '<p style="color:var(--muted);font-size:13px">No area below 55% — solid across the board.</p>'}
+      <h3 style="margin-top:16px">Strengths</h3>
+      ${strong.length? strong.map(r=>`<div class="bkrow"><div class="name">${esc(r.name)}</div>
+        <div class="barwrap bar"><div style="width:${r.pct}%;background:${barColor(r.pct)}"></div></div>
+        <div class="cnt">${r.c}/${r.a}</div></div>`).join('')
+        : '<p style="color:var(--muted);font-size:13px">Keep going — no area at 70%+ yet.</p>'}
+      <h3 style="margin-top:16px">Every system in this exam</h3>
+      ${rows.map(r=>`<div class="bkrow"><div class="name">${esc(r.name)}</div>
+        <div class="barwrap bar"><div style="width:${r.pct}%;background:${barColor(r.pct)}"></div></div>
+        <div class="cnt">${r.pct}% (${r.a})</div></div>`).join('')}
+    </div>`;
+  stopNarration();
+  showViewRaw('result');
+}
+function reviewExamWrong(){
+  const wrongIdx=(EXAM.last&&EXAM.last.wrongIdx||[]).slice();
+  if(!wrongIdx.length){ toast('No wrong answers to review.'); return; }
+  VIEW_DAY=null;
+  QUIZ={ day:'_exam', idxList:wrongIdx, pos:0, correctCount:0, wrongIdx:[], revealed:false, isExam:true, isReview:true };
+  showViewRaw('quiz'); renderQuiz();
+}
+function renderExamCard(){
+  const card=$('examCard'); if(!card) return;
+  const ip=EXAM.inProgress, last=EXAM.last;
+  const resumeBtn=$('examResumeBtn'), startBtn=$('examStartBtn'), note=$('examLastNote');
+  const canResume=!!(ip && ip.idxList && ip.idxList.length && (ip.pos||0) < ip.idxList.length);
+  if(resumeBtn){
+    resumeBtn.classList.toggle('hidden', !canResume);
+    if(canResume) resumeBtn.textContent=`Resume exam (${(ip.pos||0)+1}/${ip.idxList.length})`;
+  }
+  if(startBtn) startBtn.textContent = canResume ? 'Start new exam' : 'Start exam';
+  if(note) note.textContent = last ? `Last: ${last.pct}% (${last.correct}/${last.answered}) · ${new Date(last.ts).toLocaleDateString()}` : '';
+}
+function renderExamDash(){
+  const st=$('dashExam'), rep=$('dashExamReport'), hist=$('dashExamHistory');
+  if(!st) return;
+  const last=EXAM.last;
+  const avg=(EXAM.history&&EXAM.history.length)? Math.round(EXAM.history.reduce((s,h)=>s+h.pct,0)/EXAM.history.length):0;
+  st.innerHTML=`
+    <div class="stat"><b>${EXAM.history?EXAM.history.length:0}</b>Mock exams taken</div>
+    <div class="stat"><b>${last?last.pct+'%':'—'}</b>Last score</div>
+    <div class="stat"><b>${avg?avg+'%':'—'}</b>Average score</div>`;
+  const barColor=v=>v>=70?'#15803d':v>=50?'#d97706':'#b91c1c';
+  if(rep){
+    if(last && last.bySys && last.bySys.length){
+      rep.innerHTML=`<h3 style="margin:6px 0">Strengths &amp; weaknesses — last exam (${last.count} Q, ${new Date(last.ts).toLocaleString()})</h3>`+
+        last.bySys.map(r=>`<div class="bkrow"><div class="name">${esc(r.name)}</div>
+          <div class="barwrap bar"><div style="width:${r.pct}%;background:${barColor(r.pct)}"></div></div>
+          <div class="cnt">${r.pct}% (${r.a})</div></div>`).join('')+
+        (last.wrongIdx&&last.wrongIdx.length?`<div style="margin-top:10px"><button class="btn bad" onclick="reviewExamWrong()">Review ${last.wrongIdx.length} wrong from last exam</button></div>`:'');
+    } else {
+      rep.innerHTML='<p style="color:var(--muted);font-size:13px">No mock exam taken yet. Start one from the Plan tab.</p>';
+    }
+  }
+  if(hist){
+    const h=EXAM.history||[];
+    hist.innerHTML = h.length>1 ? '<h3 style="margin:14px 0 6px">History</h3>'+h.map(x=>`<div class="bkrow"><div class="name">${new Date(x.ts).toLocaleString()}</div>
+      <div class="barwrap bar"><div style="width:${x.pct}%;background:${barColor(x.pct)}"></div></div>
+      <div class="cnt">${x.pct}% (${x.correct}/${x.answered})</div></div>`).join('') : '';
+  }
 }
 
 // ---------------- boot ----------------
@@ -983,6 +1161,7 @@ if(TTS){
 }
 if(SR_SUPPORTED){ const pm=$('planMic'); if(pm) pm.classList.remove('hidden'); }
 renderPlan();
+try{ renderExamCard(); }catch(e){}
 </script>
 </body>
 </html>
