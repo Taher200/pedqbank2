@@ -307,11 +307,23 @@ table.cmp tbody tr:nth-child(even) td{background:#fbfaf6}
 }
 </style></head>
 <body>
+<div id="gateOverlay" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#0e2b27,#0a221e);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:30px 28px;box-shadow:0 10px 40px rgba(0,0,0,.3);text-align:center">
+    <div style="font-size:2.2em;margin-bottom:6px">🩺</div>
+    <h2 style="margin:0 0 4px;font-family:Georgia,serif">Welcome to PedsQBank</h2>
+    <p style="margin:0 0 20px;color:#5d6a64;font-size:.9em">Enter your name and email to continue. This stays on your device only — no account is created.</p>
+    <input id="gateName" type="text" placeholder="Your name" style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;border:1px solid #ccc;border-radius:8px;font:inherit">
+    <input id="gateEmail" type="email" placeholder="Your email" style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:6px;border:1px solid #ccc;border-radius:8px;font:inherit">
+    <div id="gateError" style="color:#b3261e;font-size:.82em;min-height:18px;margin-bottom:8px"></div>
+    <button onclick="gateSubmit()" style="width:100%;padding:11px;border:0;border-radius:8px;background:#0f6e63;color:#fff;font:inherit;font-weight:700;cursor:pointer;font-size:1em">Continue →</button>
+  </div>
+</div>
 <div class="app">
   <div class="scrim" id="scrim" onclick="toggleMenu(false)"></div>
   <aside id="aside">
     <div class="brand">
       <h1><span class="dot"></span>🩺 PedsQBank</h1>
+      <div id="userBadge" style="font-size:.78em;color:var(--sb-mut);margin-top:2px"></div>
       <div class="tag">CPS · 1045 Q · 2020–2025 · QUIZ · LEARN · CARDS · TABLES · SLIDES</div>
       <div class="ovr"><div class="row" id="ovrTxt"></div><div class="bar"><i id="ovrBar"></i></div>
         <button class="reset" onclick="resetProgress()">Reset progress</button>
@@ -841,6 +853,40 @@ function setFont(d){fontI=Math.max(0,Math.min(fontSteps.length-1,fontI+d));apply
   try{if(localStorage.getItem('iq_collapsed')==='1'&&window.innerWidth>860)document.querySelector('.app').classList.add('collapsed')}catch(e){}
 })();
 
+// ---------------- SIGN-IN GATE (local device only, no server) ----------------
+function gateUser(){ try{ return JSON.parse(localStorage.getItem('iq_user')||'null'); }catch(e){ return null; } }
+function gateSubmit(){
+  const name = document.getElementById('gateName').value.trim();
+  const email = document.getElementById('gateEmail').value.trim();
+  const err = document.getElementById('gateError');
+  if(!name){ err.textContent='Please enter your name.'; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent='Please enter a valid email.'; return; }
+  try{ localStorage.setItem('iq_user', JSON.stringify({name, email})); }catch(e){}
+  document.getElementById('gateOverlay').remove();
+  renderUserBadge();
+}
+function gateSwitchUser(){
+  if(!confirm('Sign out on this device? Your saved edits and progress stay put — only your name/email is cleared.')) return;
+  try{ localStorage.removeItem('iq_user'); }catch(e){}
+  location.reload();
+}
+function renderUserBadge(){
+  const u = gateUser();
+  const el = document.getElementById('userBadge');
+  if(!el) return;
+  el.innerHTML = u ? `👤 ${esc(u.name)} <button onclick="gateSwitchUser()" style="background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit;font-size:.85em;padding:0;margin-left:6px">switch</button>` : '';
+}
+(function gateInit(){
+  const u = gateUser();
+  const ov = document.getElementById('gateOverlay');
+  if(u){ if(ov) ov.remove(); }
+  else if(ov){
+    document.getElementById('gateEmail').addEventListener('keydown', e=>{ if(e.key==='Enter') gateSubmit(); });
+    document.getElementById('gateName').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('gateEmail').focus(); });
+  }
+  renderUserBadge();
+})();
+
 // ---------------- EDITS (question corrections + attached images) ----------------
 let EDITS = {};
 function loadEdits(){ try{ EDITS = JSON.parse(localStorage.getItem('iq_edits')||'{}'); }catch(e){ EDITS = {}; } }
@@ -953,7 +999,9 @@ function editSave(){
 function exportEdits(){
   const n=editedCount();
   if(!n){ alert('No edits saved on this device yet.'); return; }
-  const blob=new Blob([JSON.stringify(EDITS,null,2)],{type:'application/json'});
+  const u = gateUser();
+  const payload = { user: u||null, edits: EDITS };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='pedqbank-edits.json'; a.click();
 }
 function importEdits(ev){
@@ -961,7 +1009,8 @@ function importEdits(ev){
   const reader=new FileReader();
   reader.onload=()=>{
     try{
-      const incoming = JSON.parse(reader.result);
+      const parsed = JSON.parse(reader.result);
+      const incoming = (parsed && parsed.edits) ? parsed.edits : parsed;
       Object.assign(EDITS, incoming);
       if(!persistEdits()) return;
       applyEdits(); buildTOC(); render(); updateEditBadge();
